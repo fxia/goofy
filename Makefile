@@ -1,6 +1,6 @@
 #-*- mode: makefile -*-
 
-OBJS = Util.o Timer.o
+OBJS = Util.o Timer.o Packet.o
 
 all : libgoofy.so
 

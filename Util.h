@@ -28,14 +28,14 @@ inline sockaddr_in inetSockAddr( in_addr ipAddr )
     return addr;
 }
 
-int getInterfaceAddrMask( const char* ifName, uint* addr, uint* mask );
+int getInterfaceAddrMask( const char* ifName, in_addr* addr, in_addr* mask );
 
 in_addr v4MaskLen2Ip( uint len );
 
 uint v4MaskIp2Len( in_addr mask );
 
 in_addr v4PrefixIp( in_addr ipAddr, uint prefixLen );
-    
+
 /* Simple collector of heap pointer */
 struct scope_ptr {
    scope_ptr( char* p ) : ptr_(p) {}

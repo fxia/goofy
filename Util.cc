@@ -76,7 +76,7 @@ Util::inetChecksum( const char* bytes, uint nbytes )
 }
 
 int
-Util::getInterfaceAddrMask( const char* ifName, uint* addr, uint* mask )
+Util::getInterfaceAddrMask( const char* ifName, in_addr* addr, in_addr* mask )
 {
     struct ifreq req;
     memset( &req, 0, sizeof(req) );
@@ -106,8 +106,8 @@ Util::getInterfaceAddrMask( const char* ifName, uint* addr, uint* mask )
     fprintf( stderr, "%s: %s, %s\n", ifName, inet_ntoa(inetAddr),
              inet_ntoa(inetMask) );
 
-    *addr = inetAddr.s_addr;
-    *mask = inetAddr.s_addr;
+    *addr = inetAddr;
+    *mask = inetMask;
 
     return 0;
 }
