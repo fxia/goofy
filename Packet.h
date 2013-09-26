@@ -4,9 +4,9 @@
 #include <netinet/in.h>
 #include "Util.h"
 
-namespace Packet {
+namespace IpPkt {
 
-struct IpPktInfo {
+struct PktInfo {
     in_addr src;
     in_addr dst;
     in_addr local;
@@ -16,10 +16,10 @@ struct IpPktInfo {
 };
 
 /* Receive an IP packet */
-int recvPkt( int sock, char* buf, uint bufSz, IpPktInfo* info );
+int recvPkt( int sock, char* buf, uint bufSz, PktInfo* info );
 
 /* Send an IP packet */
-int sendPkt( int sock, const char* buf, uint bufSz, const IpPktInfo* info );
+int sendPkt( int sock, const char* buf, uint bufSz, const PktInfo* info );
 
 };
 
