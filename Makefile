@@ -1,13 +1,15 @@
 #-*- mode: makefile -*-
 
-OBJS = Util.o Timer.o Packet.o
+HDRS = Util.h Timer.h Packet.h Dispatcher.h
+OBJS = Util.o Timer.o Packet.o Dispatcher.o
 
 all : libgoofy.so
 
 libgoofy.so : $(OBJS)
 	gcc -shared -o $@ $(OBJS) -lstdc++
 
-%.o : %.cc %.h
+# No deps yet
+%.o : %.cc $(HDRS) 
 	g++ -c -fPIC -Wall $<
 
 clean :

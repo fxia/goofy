@@ -12,14 +12,13 @@ static MainLoop* mainLoop_ = 0;
 struct MainLoop::Impl {
     
     TimerQueue* timerQueue_;
-
     typedef std::map< int, IOHandler* > IOHandlerColl;
 
     IOHandlerColl readHandlers_;
     IOHandlerColl writeHandlers_;
-    IOHandlerColl errorHandlers_;
+    IOHandlerColl errorHandlers_; // unused
 
-    void run() {
+    int run() {
         fd_set rfds, wfds, efds;
    
         while (1) {
@@ -30,42 +29,39 @@ struct MainLoop::Impl {
             
             for ( IOHandlerColl::const_iterator it = readHandlers_.begin();
                   it != readHandlers_.end(); it++ ) {
-                maxSock = max( maxSock, it->second->socket() );
-                FD_SET( it->second->socket(), &rfds );
+                maxSock = maxSock > it->first ? maxSock : it->first;
+                FD_SET( it->first, &rfds );
             }
             for ( IOHandlerColl::const_iterator it = writeHandlers_.begin();
                   it != writeHandlers_.end(); it++ ) {
-                maxSock = max( maxSock, it->second->socket() );
-                FD_SET( it->second->socket(), &wfds );
+                maxSock = maxSock > it->first ? maxSock : it->first;
+                FD_SET( it->first, &wfds );
             }
             long long timeoutMs = timerQueue_->minFireTime();
             timeval timeout = { timeoutMs / 1000, ( timeoutMs % 1000 ) * 1000 };
-            r = select( maxSock + 1, &rfds, &wfds, &efds, &timeout );
+            int r = select( maxSock + 1, &rfds, &wfds, &efds, &timeout );
             if ( r > 0 ) {
-                checkReadHandlers( &rfds );
+                checkHandlers( rfds, IORead, readHandlers_ );
                 checkTimerQueue();
-                checkWriteHandlers( &wfds );
+                checkHandlers( wfds, IOWrite, writeHandlers_ );
                 checkTimerQueue();                
             } else {
                 checkTimerQueue();
             }
         }
+        return 0;
     }
 
-    void checkReadHandlers( const fd_set& fds ) {
-        for ( IOHandlerColl::iterator it = readHandlers_.begin();
-              it != readHandlers_.end(); it++ ) {
+    void checkHandlers( const fd_set& fds, IOFlag flag,
+                        IOHandlerColl& handlers ) {
+        for ( IOHandlerColl::iterator it = handlers.begin();
+              it != handlers.end(); it++ ) {
             if ( FD_ISSET( it->first, &fds ) ) {
-                it->second->handleRead();
-            }
-        }
-    }
-
-    void checkWriteHandlers( const fd_set& fds ) {
-        for ( IOHandlerColl::iterator it = writeHandlers_.begin();
-              it != writeHandlers_.end(); it++ ) {
-            if ( FD_ISSET( it->first, &fds ) ) {
-                it->second->handleWrite();
+                if ( flag == IORead ) {
+                    it->second->handleSocket( it->first, IORead );
+                } else if ( flag == IOWrite ) {
+                    it->second->handleSocket( it->first, IOWrite );
+                }
             }
         }
     }
@@ -73,6 +69,41 @@ struct MainLoop::Impl {
     void checkTimerQueue() {
         timerQueue_->fireTimers();
     }
+
+    int addIOHandler( int sock, uint flags, IOHandler* handler ) {
+        if ( flags & IORead ) {
+            if ( readHandlers_.find( sock ) != readHandlers_.end() ) {
+                fprintf( stderr, "IORead exists for %d\n", sock );
+                return -1;
+            }
+            readHandlers_[ sock ] = handler;
+        }
+        if ( flags & IOWrite ) {
+            if ( writeHandlers_.find( sock ) != writeHandlers_.end() ) {
+                fprintf( stderr, "IOWrite exists for %d\n", sock );
+                return -1;
+            }
+            writeHandlers_[ sock ] = handler;
+        }
+        return 0;
+    }
+
+    int removeIOHandler( int sock, uint flags, IOHandler* handler ) {
+        if ( flags & IORead ) {
+            IOHandlerColl::iterator it = readHandlers_.find( sock );
+            if ( it != readHandlers_.end() ) {
+                readHandlers_.erase( it );
+            }
+        }
+        if ( flags & IOWrite ) {
+            IOHandlerColl::iterator it = writeHandlers_.find( sock );
+            if ( it != writeHandlers_.end() ) {
+                writeHandlers_.erase( it );
+            }
+        }
+        return 0;
+    }
+
 };
 
 MainLoop::MainLoop( TimerQueue* queue )
@@ -86,14 +117,14 @@ MainLoop::~MainLoop()
     delete impl_;
 }
 
+int
 MainLoop::run()
 {
-    impl->run();
-
+    return impl_->run();
 }
 
 MainLoop*
-MainLoop::init( Timer::Queue* timerQueue )
+MainLoop::init( TimerQueue* timerQueue )
 {
     if ( mainLoop_ != 0 ) {
         assert( mainLoop_->impl_->timerQueue_ == timerQueue );
@@ -101,43 +132,18 @@ MainLoop::init( Timer::Queue* timerQueue )
     }
     assert( timerQueue != 0 );
     mainLoop_ = new MainLoop( timerQueue );
+    return mainLoop_;
 }
 
 int
 MainLoop::addIOHandler( int sock, uint flags, IOHandler* handler )
 {
-    if ( flags & IORead ) {
-        if ( impl_->readHandlers_.find( sock ) != impl_->readHandlers_.end() ) {
-            fprintf( stderr, "IORead exists for %d\n", sock );
-            return -1;
-        }
-        impl_->readHandlers_[ sock ] = handler;
-    }
-    if ( flags & IOWrite ) {
-        if ( impl_->writeHandlers_.find( sock ) != impl_->writeHandlers_.end() ) {
-            fprintf( stderr, "IOWrite exists for %d\n", sock );
-            return -1;
-        }
-        impl_->writeHandlers_[ sock ] = handler;
-    }
-    return 0;
+    return impl_->addIOHandler( sock, flags, handler );
 }
 
 int
 MainLoop::removeIOHandler( int sock, uint flags, IOHandler* handler )
 {
-    if ( flags & IORead ) {
-        Impl::IOHandlerColl::iterator it = impl_->readHandlers_.find( sock );
-        if ( it != impl_->readHandlers_.end() ) {
-            impl_->readHandlers_.erase( it );
-        }
-    }
-    if ( flags & IOWrite ) {
-        Impl::IOHandlerColl::iterator it = impl_->writeHandlers_.find( sock );
-        if ( it != impl_->writeHandlers_.end() ) {
-            impl_->writeHandlers_.erase( it );
-        }
-    }
-    return 0;
+    return impl_->removeIOHandler( sock, flags, handler );
 }
 

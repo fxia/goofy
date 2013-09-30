@@ -5,18 +5,18 @@
 
 namespace Dispatcher {
 
-enum {
+enum IOFlag {
     IORead      = 0x01,
     IOWrite     = 0x02,
 };
     
 struct IOHandler {
-    virtual int handleSocket( int sock, uint flags ) = 0;
+    virtual int handleSocket( int sock, IOFlag flag ) = 0;
 };
 
 struct MainLoop {
 
-    static MainLoop* init( Timer::Queue* timerQueue );
+    static MainLoop* init( TimerQueue* timerQueue );
 
     int addIOHandler( int sock, uint flags, IOHandler* handler );
 
@@ -25,7 +25,7 @@ struct MainLoop {
     int run();
 
 private:
-    MainLoop( Timer::Queue* timerQueue );
+    MainLoop( TimerQueue* timerQueue );
     
     struct Impl;
     Impl*  impl_;

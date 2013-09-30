@@ -10,10 +10,10 @@
 
 #include "Packet.h"
 
-using namespace Packet;
+using namespace IpPkt;
 
 int
-recvPkt( int sock, char* buffer, uint bufSz, IpPktInfo* pktInfo )
+recvPkt( int sock, char* buffer, uint bufSz, PktInfo* pktInfo )
 {
     assert( buffer && ( bufSz > 0 ) );
     
@@ -77,7 +77,7 @@ recvPkt( int sock, char* buffer, uint bufSz, IpPktInfo* pktInfo )
 }
 
 int
-sendPkt( int sock, const char* buf, uint bufSz, const IpPktInfo* pktInfo )
+sendPkt( int sock, const char* buf, uint bufSz, const PktInfo* pktInfo )
 {
     struct iphdr ipHdr;
 

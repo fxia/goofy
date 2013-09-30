@@ -11,49 +11,28 @@ long long getCurrentTimeInMs();
    
 };
 
+typedef void (TimerFunc)( uint token, void* data );
 
-struct Timer {
+struct TimerQueue {
 
-   typedef void (TimerFunc)( uint token, void* data );
+    TimerQueue();
+
+    ~TimerQueue();
+    
+    int addTimer( TimerFunc func, uint offset, uint interval, void* data );
    
-   static int addTimer( TimerFunc func, uint offset, uint interval,
-                        void* data );
-   
-   static void cancelTimer( uint token );
+    void cancelTimer( uint token );
 
-   static long long minFireTime();
+    long long minFireTime();
    
-   static int fireTimers();
+    int fireTimers();
 
-   static uint queueSize( bool countCancel=false );
-   
-   bool operator < ( const Timer& timer ) const {
-       return fireTime_ < timer.fireTime_;
-   }
-
-   ~Timer();
+    uint queueSize( bool countCancel=false );
    
 private:
-   Timer( uint token, TimerFunc func, uint offset, uint interval, void* data );
 
-   int fire();
-   
-   uint         token_;
-   long long    fireTime_;
-   uint         interval_;
-   bool         cancelled_;
-   TimerFunc*   func_;
-   void*        data_;
-
-   typedef std::priority_queue< Timer* > TimerQueue;
-   static TimerQueue timerQueue_;
-
-   typedef std::map< uint, Timer* > TimerIndex;
-   static TimerIndex timerIndex_;
-   
-   static uint cancelCount_;
-   
-   static void deleteFrontTimer();
+    struct Impl;
+    Impl* impl_;
 };
 
 #endif
